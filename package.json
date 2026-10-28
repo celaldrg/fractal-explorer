@@ -1,0 +1,11 @@
+{
+  "name": "fractal-explorer",
+  "version": "1.0.0",
+  "description": "Explore the Mandelbrot set, Julia sets, the Burning Ship, the Tricorn and Multibrot fractals in the browser with progressive multi-worker rendering.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

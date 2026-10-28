@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Fractal Explorer</title>
+    <meta
+      name="description"
+      content="Explore the Mandelbrot set, Julia sets, the Burning Ship and more in your browser: smooth deep zoom, ten palettes, famous places and share links."
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fractal Explorer" />
+    <meta
+      property="og:description"
+      content="Deep-zoom fractal explorer: Mandelbrot, Julia, Burning Ship, Tricorn and Multibrot sets with ten palettes, famous places and share links."
+    />
+    <meta property="og:url" content="https://celaldrg.github.io/fractal-explorer/" />
+    <meta property="og:image" content="https://celaldrg.github.io/fractal-explorer/docs/screenshot.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f172a'/%3E%3Cg fill='%23e879f9'%3E%3Ccircle cx='43.7' cy='32' r='15'/%3E%3Ccircle cx='25' cy='32' r='6.4'/%3E%3Ccircle cx='15.7' cy='32' r='3'/%3E%3Ccircle cx='46.4' cy='14.6' r='3.5'/%3E%3Ccircle cx='46.4' cy='49.4' r='3.5'/%3E%3C/g%3E%3Cpath d='M5 32h9' stroke='%23e879f9' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="src/main.js"></script>
+  </head>
+  <body>
+    <canvas id="view" class="view" role="img" data-i18n-label="canvas.label" aria-label="Fractal picture. Drag to pan, use the wheel or pinch to zoom, double-click or double-tap to zoom in."></canvas>
+
+    <header class="header">
+      <h1 class="brand">
+        <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="16.4" cy="12" r="5.6" />
+          <circle cx="9.4" cy="12" r="2.4" />
+          <circle cx="5.9" cy="12" r="1.1" />
+          <circle cx="17.4" cy="5.5" r="1.3" />
+          <circle cx="17.4" cy="18.5" r="1.3" />
+          <path class="brand-antenna" d="M1.5 12h3.4" />
+        </svg>
+        <span data-i18n="app.title">Fractal Explorer</span>
+      </h1>
+      <div class="header-actions">
+        <button id="reset" class="header-button" type="button" data-i18n-title="header.resetHint">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+            <path d="M3.5 4v5h5" />
+          </svg>
+          <span class="button-text" data-i18n="header.reset">Reset</span>
+        </button>
+        <button
+          id="lang"
+          class="header-button lang-button"
+          type="button"
+          data-i18n-label="lang.switch"
+          data-i18n-title="lang.switch"
+          aria-label="TR: switch to Turkish (Türkçe)"
+        >
+          <span data-i18n="lang.code">TR</span>
+        </button>
+        <button
+          id="controls"
+          class="header-button"
+          type="button"
+          aria-controls="drawer"
+          aria-expanded="false"
+          data-i18n-title="header.controlsHint"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+            <circle cx="15" cy="7" r="2" />
+            <circle cx="9" cy="17" r="2" />
+          </svg>
+          <span class="button-text" data-i18n="header.controls">Controls</span>
+        </button>
+      </div>
+    </header>
+
+    <div id="progress" class="progress" aria-hidden="true" hidden><div id="progress-bar" class="progress-bar"></div></div>
+
+    <div class="messages" aria-live="polite">
+      <p id="notice" class="notice" data-i18n="notice.precision" hidden>Precision limit: the view is narrower than about 1e-13, where double precision runs out and the picture turns blocky.</p>
+      <p id="toast" class="toast"></p>
+    </div>
+
+    <div id="zoom-box" class="zoom-box" hidden></div>
+
+    <div class="hud">
+      <figure id="preview" class="preview" hidden>
+        <canvas id="preview-canvas" width="336" height="224" aria-hidden="true"></canvas>
+        <figcaption>
+          <span class="preview-title" data-i18n="preview.title">Julia preview</span>
+          <span id="preview-c" class="preview-c"></span>
+        </figcaption>
+      </figure>
+      <div
+        id="toolbar"
+        class="toolbar"
+        role="toolbar"
+        data-i18n-label="toolbar.label"
+        aria-label="View tools"
+      >
+        <button
+          id="zoom-in"
+          class="tool"
+          type="button"
+          data-i18n-label="toolbar.zoomIn"
+          data-i18n-title="toolbar.zoomIn"
+          aria-label="Zoom in (+)"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <button
+          id="zoom-out"
+          class="tool"
+          type="button"
+          data-i18n-label="toolbar.zoomOut"
+          data-i18n-title="toolbar.zoomOut"
+          aria-label="Zoom out (−)"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14" /></svg>
+        </button>
+        <button
+          id="back"
+          class="tool"
+          type="button"
+          data-i18n-label="toolbar.back"
+          data-i18n-title="toolbar.back"
+          aria-label="Back: undo the last zoom step"
+          disabled
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 14 4 9l5-5" />
+            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+          </svg>
+        </button>
+        <button
+          id="julia"
+          class="tool"
+          type="button"
+          aria-pressed="false"
+          data-i18n-label="toolbar.julia"
+          data-i18n-title="toolbar.julia"
+          aria-label="Julia mode (J)"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M10.5 12a1.5 1.5 0 0 1 3 0a3 3 0 0 1-6 0a4.5 4.5 0 0 1 9 0a6 6 0 0 1-12 0a7.5 7.5 0 0 1 15 0" stroke-width="1.7" />
+          </svg>
+        </button>
+      </div>
+      <dl class="info">
+        <div class="info-item info-center">
+          <dt data-i18n="info.center">Center</dt>
+          <dd id="info-center"></dd>
+        </div>
+        <div class="info-item">
+          <dt data-i18n="info.zoom">Zoom</dt>
+          <dd id="info-zoom"></dd>
+        </div>
+        <div class="info-item">
+          <dt data-i18n="info.iterations">Iterations</dt>
+          <dd id="info-iterations"></dd>
+        </div>
+        <div class="info-item">
+          <dt data-i18n="info.time">Render</dt>
+          <dd id="info-time"></dd>
+        </div>
+      </dl>
+    </div>
+
+    <aside id="drawer" class="drawer" aria-labelledby="drawer-title" inert>
+      <div class="drawer-head">
+        <h2 id="drawer-title" data-i18n="drawer.title">Controls</h2>
+        <button
+          id="drawer-close"
+          class="tool tool-flat"
+          type="button"
+          data-i18n-label="drawer.close"
+          data-i18n-title="drawer.close"
+          aria-label="Close the controls"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <section class="panel">
+          <h3 id="fractal-title" data-i18n="section.fractal">Fractal</h3>
+          <div id="type-list" class="chip-grid" role="group" aria-labelledby="fractal-title"></div>
+        </section>
+
+        <section class="panel">
+          <h3 id="palette-title">
+            <span data-i18n="section.palette">Palette</span>
+            <span id="palette-name" class="panel-value"></span>
+          </h3>
+          <div id="palette-list" class="swatch-grid" role="group" aria-labelledby="palette-title"></div>
+          <label class="slider" for="density">
+            <span class="slider-label">
+              <span data-i18n="label.density">Density</span>
+              <output id="density-value" for="density"></output>
+            </span>
+            <input id="density" type="range" min="-1" max="1" step="0.01" value="0" />
+          </label>
+          <label class="slider" for="offset">
+            <span class="slider-label">
+              <span data-i18n="label.offset">Offset</span>
+              <output id="offset-value" for="offset"></output>
+            </span>
+            <input id="offset" type="range" min="0" max="0.99" step="0.01" value="0" />
+          </label>
+        </section>
+
+        <section class="panel">
+          <h3 id="coloring-title" data-i18n="section.coloring">Coloring</h3>
+          <div class="segmented" role="group" aria-labelledby="coloring-title">
+            <button type="button" data-coloring="smooth" aria-pressed="true" data-i18n="coloring.smooth">Smooth</button>
+            <button type="button" data-coloring="histogram" aria-pressed="false" data-i18n="coloring.histogram">
+              Histogram
+            </button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3 id="iterations-title" data-i18n="section.iterations">Iteration limit</h3>
+          <div class="segmented" role="group" aria-labelledby="iterations-title">
+            <button type="button" data-iterations="auto" aria-pressed="true" data-i18n="iterations.auto">Auto</button>
+            <button type="button" data-iterations="manual" aria-pressed="false" data-i18n="iterations.manual">
+              Manual
+            </button>
+          </div>
+          <input
+            id="iterations"
+            class="field"
+            type="number"
+            min="16"
+            max="50000"
+            step="1"
+            inputmode="numeric"
+            aria-labelledby="iterations-title"
+            aria-describedby="iterations-note"
+          />
+          <p id="iterations-note" class="note"></p>
+        </section>
+
+        <section class="panel">
+          <h3 data-i18n="section.julia">Julia set</h3>
+          <button id="julia-pick" class="button button-toggle" type="button" aria-pressed="false">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="6.5" />
+              <path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" />
+            </svg>
+            <span data-i18n="julia.pick">Pick c on the Mandelbrot set</span>
+          </button>
+          <p class="note" data-i18n="julia.hint">Hover or drag over the set: the corner shows the Julia set of that point. Click or lift your finger to open it.</p>
+          <div class="pair">
+            <label class="field-label">
+              <span data-i18n="julia.re">Real part (Re c)</span>
+              <input id="julia-re" class="field" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label class="field-label">
+              <span data-i18n="julia.im">Imaginary part (Im c)</span>
+              <input id="julia-im" class="field" type="number" step="any" inputmode="decimal" />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3 data-i18n="section.places">Famous places</h3>
+          <ul id="place-list" class="place-list"></ul>
+        </section>
+
+        <section class="panel">
+          <h3 data-i18n="section.share">Save and share</h3>
+          <div class="button-row">
+            <button id="save-png" class="button" type="button">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+              </svg>
+              <span data-i18n="action.save">Save PNG</span>
+            </button>
+            <button id="share-link" class="button" type="button">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+                <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+              </svg>
+              <span data-i18n="action.share">Copy link</span>
+            </button>
+          </div>
+          <p class="note" data-i18n="share.note">The link keeps the fractal, the view, the palette with its density and offset, the coloring, the iteration limit and c.</p>
+        </section>
+
+        <section class="panel">
+          <h3 data-i18n="section.help">How to explore</h3>
+          <ul class="help">
+            <li data-i18n="help.drag">Drag to pan the picture.</li>
+            <li data-i18n="help.zoom">Wheel or pinch zooms around the pointer; double-click or double-tap zooms in.</li>
+            <li data-i18n="help.box">Shift-drag draws a zoom box; Back undoes zoom steps.</li>
+            <li data-i18n="help.keys">Keys: arrows pan, + and − zoom, 0 resets, J toggles Julia mode.</li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+
+    <footer class="footer">
+      <span>MIT</span>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/celaldrg/fractal-explorer" rel="noopener" data-i18n="footer.source">Source on GitHub</a>
+    </footer>
+  </body>
+</html>
