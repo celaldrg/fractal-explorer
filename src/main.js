@@ -357,6 +357,7 @@ byId('zoom-out').addEventListener('click', act(() => zoomCenter(1 / ZOOM_STEP)))
 backButton.addEventListener('click', act(() => explorer.back()));
 juliaButton.addEventListener('click', act(toggleJulia));
 controlsButton.addEventListener('click', () => setDrawer(!document.body.classList.contains('drawer-open')));
+byId('preview-close').addEventListener('click', () => setPicking(false));
 byId('drawer-close').addEventListener('click', () => setDrawer(false));
 byId('lang').addEventListener('click', () => {
   lang = otherLanguage(lang);

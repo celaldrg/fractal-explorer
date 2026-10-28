@@ -87,6 +87,16 @@
 
     <div class="hud">
       <figure id="preview" class="preview" hidden>
+        <button
+          id="preview-close"
+          class="preview-close"
+          type="button"
+          data-i18n-label="preview.close"
+          data-i18n-title="preview.close"
+          aria-label="Close the Julia picker"
+        >
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
         <canvas id="preview-canvas" width="336" height="224" aria-hidden="true"></canvas>
         <figcaption>
           <span class="preview-title" data-i18n="preview.title">Julia preview</span>

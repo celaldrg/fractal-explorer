@@ -45,7 +45,12 @@ function colours(values, state, cdf) {
   return rgba;
 }
 
-test('switching to histogram colouring during the first pass never shows smooth colours', async (t) => {
+/**
+ * Renders the home view with smooth colouring and switches to histogram
+ * colouring as soon as the first coarse tile has been painted.
+ * @param {import('node:test').TestContext} t
+ */
+async function renderWithSwitch(t) {
   t.mock.method(console, 'warn', () => {}); // Node has no Web Workers: tiles are computed on this thread
   globalThis.document = { createElement: () => fakeCanvas([]) };
   t.after(() => delete globalThis.document);
@@ -70,6 +75,11 @@ test('switching to histogram colouring during the first pass never shows smooth 
     renderer.resize(WIDTH, HEIGHT, 1);
     renderer.render(smooth);
   });
+  return { smooth, histogram, puts, switchedAt };
+}
+
+test('switching to histogram colouring during the first pass never shows smooth colours', async (t) => {
+  const { smooth, histogram, puts, switchedAt } = await renderWithSwitch(t);
 
   const repaint = puts[switchedAt];
   assert.ok(repaint.w < WIDTH && repaint.h <= HEIGHT, 'the computed tile is painted again on its own');
@@ -84,4 +94,16 @@ test('switching to histogram colouring during the first pass never shows smooth 
   const final = puts.at(-1);
   assert.deepEqual([final.w, final.h], [WIDTH, HEIGHT]);
   assert.ok(sameBytes(final.data, colours(values, histogram, buildCdf(values, maxIter))), 'the finished frame');
+});
+
+test('after a mid-pass switch, histogram colours of early tiles are refreshed before the pass ends', async (t) => {
+  const { puts, switchedAt } = await renderWithSwitch(t);
+  const first = puts[switchedAt];
+  const cover = puts.findIndex((put, i) => i > switchedAt && put.w === WIDTH && put.h === HEIGHT);
+  assert.ok(cover > switchedAt, 'the covered image is painted in full');
+  const repaints = puts
+    .slice(switchedAt + 1, cover)
+    .filter((put) => put.x === first.x && put.y === first.y && put.w === first.w && put.h === first.h);
+  assert.ok(repaints.length >= 1, 'the first tile is painted again with a newer partial distribution');
+  assert.ok(repaints.length < 12, 'refreshes are spaced out (the tile count doubles between them)');
 });

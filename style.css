@@ -365,6 +365,7 @@ body.picking .view {
 }
 
 .preview {
+  position: relative;
   margin: 0;
   padding: 6px;
   border: 1px solid var(--accent-line);
@@ -373,6 +374,44 @@ body.picking .view {
   box-shadow: var(--shadow);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
+}
+
+.preview-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color var(--speed) var(--ease);
+}
+
+.preview-close::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--accent-line);
+}
+
+.preview-close .icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+
+.preview-close:hover,
+.preview-close:focus-visible {
+  color: var(--accent);
 }
 
 .preview canvas {

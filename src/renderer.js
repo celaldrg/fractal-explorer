@@ -14,6 +14,13 @@ import { coloringOf, paintImage } from './paint.js';
 
 const BACKDROP = '#0f172a';
 
+/**
+ * After a switch to histogram colouring mid-pass, the partial distribution is
+ * rebuilt (and the computed tiles repainted) each time the number of computed
+ * tiles has grown by this factor: colours converge at a bounded total cost.
+ */
+const REFRESH_GROWTH = 2;
+
 /** Beyond this magnification the moved old frame is too coarse to be worth drawing. */
 const MAX_SHIFT_SCALE = 64;
 
@@ -27,7 +34,8 @@ const MAX_SHIFT_SCALE = 64;
  * @property {boolean} covered every pixel holds a value (the first pass is done)
  * @property {TileJob[]} computed tiles that arrived before the image was covered
  * @property {Float64Array|null} cdf distribution of the values, for histogram colouring;
- *   before the image is covered, only of the computed tiles
+ *   before the image is covered, only of the first `cdfTiles` computed tiles
+ * @property {number} cdfTiles how many computed tiles the partial cdf was built from
  * @property {boolean} done
  */
 
@@ -130,8 +138,18 @@ export function createRenderer(canvas, hooks) {
    * @returns {Float64Array|null}
    */
   function partialCdf(current) {
-    if (current.computed.length === 0) return null;
+    current.cdfTiles = current.computed.length;
+    if (current.cdfTiles === 0) return null;
     return buildCdf(readTiles(values, width, current.computed), current.state.maxIter);
+  }
+
+  /**
+   * Builds the partial distribution again and repaints every computed tile with it.
+   * @param {Frame} current
+   */
+  function repaintComputed(current) {
+    current.cdf = current.state.coloring === 'histogram' ? partialCdf(current) : null;
+    for (const tile of current.computed) paintTile(current, tile, readTiles(values, width, [tile]));
   }
 
   /**
@@ -183,10 +201,13 @@ export function createRenderer(canvas, hooks) {
     if (current !== frame) return;
     storeTile(tile, tileValues);
     const histogram = current.state.coloring === 'histogram';
-    if (current.covered || !histogram || current.cdf) paintTile(current, tile, tileValues);
-    if (!current.covered) {
+    if (current.covered) paintTile(current, tile, tileValues);
+    else {
       current.computed.push(tile);
       if (status.passComplete) cover(current);
+      else if (histogram && current.cdf && current.computed.length >= REFRESH_GROWTH * current.cdfTiles) {
+        repaintComputed(current);
+      } else if (!histogram || current.cdf) paintTile(current, tile, tileValues);
     }
     if (status.finished) finish(current, histogram);
     else hooks.onProgress(queue.progress());
@@ -236,7 +257,7 @@ export function createRenderer(canvas, hooks) {
       showMoved(state);
       pool.cancel();
       /** @type {Frame} */
-      const current = { state, started: performance.now(), covered: false, computed: [], cdf: null, done: false };
+      const current = { state, started: performance.now(), covered: false, computed: [], cdf: null, cdfTiles: 0, done: false };
       frame = current;
       if (sync) {
         values = computeImage(state.fractal, state.view, width, height);
@@ -261,8 +282,7 @@ export function createRenderer(canvas, hooks) {
       current.state = state;
       const histogram = state.coloring === 'histogram';
       if (!current.covered) {
-        current.cdf = histogram ? partialCdf(current) : null;
-        for (const tile of current.computed) paintTile(current, tile, readTiles(values, width, [tile]));
+        repaintComputed(current);
         return;
       }
       if (histogram && !current.cdf) current.cdf = buildCdf(values, state.maxIter);
